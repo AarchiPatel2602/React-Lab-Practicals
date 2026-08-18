@@ -1,10 +1,23 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
 import Loading from "../components/Loading";
 import ErrorMessage from "../components/ErrorMessage";
 
 const API_URL = "http://localhost:5000/tasks";
 
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+};
+
 function Projects() {
+  const navigate = useNavigate();
+
   const [tasks, setTasks] = useState([]);
 
   const [title, setTitle] = useState("");
@@ -16,19 +29,40 @@ function Projects() {
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
 
+  // HANDLE UNAUTHORIZED RESPONSE
+  const handleUnauthorized = (response) => {
+    if (response.status === 401) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+
+      navigate("/login");
+
+      return true;
+    }
+
+    return false;
+  };
+
   // GET TASKS
   const fetchTasks = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(API_URL);
+      const response = await fetch(API_URL, {
+        headers: getAuthHeaders(),
+      });
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch tasks");
+      if (handleUnauthorized(response)) {
+        return;
       }
 
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to fetch tasks");
+      }
+
       setTasks(data);
     } catch (err) {
       setError(err.message);
@@ -38,6 +72,13 @@ function Projects() {
   };
 
   useEffect(() => {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login");
+      return;
+    }
+
     fetchTasks();
   }, []);
 
@@ -57,15 +98,17 @@ function Projects() {
 
       const response = await fetch(API_URL, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           title,
           description,
           priority,
         }),
       });
+
+      if (handleUnauthorized(response)) {
+        return;
+      }
 
       const data = await response.json();
 
@@ -96,13 +139,15 @@ function Projects() {
 
       const response = await fetch(`${API_URL}/${task._id}`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           completed: !task.completed,
         }),
       });
+
+      if (handleUnauthorized(response)) {
+        return;
+      }
 
       const data = await response.json();
 
@@ -135,7 +180,12 @@ function Projects() {
 
       const response = await fetch(`${API_URL}/${id}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
+
+      if (handleUnauthorized(response)) {
+        return;
+      }
 
       const data = await response.json();
 
@@ -165,12 +215,13 @@ function Projects() {
     <main className="page-shell">
       <section className="tasks-header">
         <div>
-          <span className="eyebrow">FULL STACK PRACTICAL 06</span>
+          <span className="eyebrow">FULL STACK PRACTICAL 07</span>
 
           <h1>Task Management</h1>
 
           <p>
-            Manage your tasks with React, Express, MongoDB and Mongoose.
+            Manage your tasks with React, Express, MongoDB and JWT
+            authentication.
           </p>
         </div>
 
@@ -291,7 +342,9 @@ function Projects() {
 
                   <span
                     className={`status ${
-                      task.completed ? "status-completed" : "status-pending"
+                      task.completed
+                        ? "status-completed"
+                        : "status-pending"
                     }`}
                   >
                     {task.completed ? "Completed" : "Pending"}

@@ -9,6 +9,7 @@ const validateJson = require("./middleware/validateJson");
 const errorHandler = require("./middleware/errorHandler");
 
 const taskRoutes = require("./routes/tasks");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 
@@ -23,7 +24,7 @@ app.use(
             "http://127.0.0.1:5173"
         ],
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allowedHeaders: ["Content-Type"],
+        allowedHeaders: ["Content-Type", "Authorization"],
     })
 );
 
@@ -35,6 +36,7 @@ app.use(logger);
 app.use(validateJson);
 
 // Routes
+app.use("/auth", authRoutes);
 app.use("/tasks", taskRoutes);
 
 // 404 Handler

@@ -4,6 +4,10 @@ const router = express.Router();
 
 const Task = require("../models/Task");
 
+const authMiddleware = require("../middleware/auth");
+
+router.use(authMiddleware);
+
 
 // GET ALL TASKS
 router.get("/", async (req, res) => {
