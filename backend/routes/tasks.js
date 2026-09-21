@@ -3,18 +3,29 @@ const express = require("express");
 const router = express.Router();
 
 const Task = require("../models/Task");
+const cache = require("../config/cache");
 
 const authMiddleware = require("../middleware/auth");
 
 router.use(authMiddleware);
 
 
-// GET ALL TASKS
+// GET ALL TASKS (Cached with "all_tasks")
 router.get("/", async (req, res) => {
 
     try {
 
+        const cachedTasks = cache.get("all_tasks");
+
+        if (cachedTasks) {
+            cache.incrementHits();
+            return res.status(200).json(cachedTasks);
+        }
+
+        cache.incrementMisses();
         const tasks = await Task.find();
+
+        cache.set("all_tasks", tasks);
 
         res.status(200).json(tasks);
 
@@ -29,11 +40,20 @@ router.get("/", async (req, res) => {
 });
 
 
-// GET TASK BY ID
+// GET TASK BY ID (Cached with "task_<id>")
 router.get("/:id", async (req, res) => {
 
     try {
 
+        const cacheKey = `task_${req.params.id}`;
+        const cachedTask = cache.get(cacheKey);
+
+        if (cachedTask) {
+            cache.incrementHits();
+            return res.status(200).json(cachedTask);
+        }
+
+        cache.incrementMisses();
         const task = await Task.findById(req.params.id);
 
         if (!task) {
@@ -43,6 +63,8 @@ router.get("/:id", async (req, res) => {
             });
 
         }
+
+        cache.set(cacheKey, task);
 
         res.status(200).json(task);
 
@@ -57,12 +79,15 @@ router.get("/:id", async (req, res) => {
 });
 
 
-// CREATE TASK
+// CREATE TASK (Invalidates "all_tasks")
 router.post("/", async (req, res) => {
 
     try {
 
         const task = await Task.create(req.body);
+
+        // Invalidate all_tasks cache only after successful database write
+        cache.del("all_tasks");
 
         res.status(201).json(task);
 
@@ -77,7 +102,7 @@ router.post("/", async (req, res) => {
 });
 
 
-// UPDATE TASK
+// UPDATE TASK (Invalidates "all_tasks" and "task_<id>")
 router.put("/:id", async (req, res) => {
 
     try {
@@ -103,6 +128,10 @@ router.put("/:id", async (req, res) => {
 
         }
 
+        // Invalidate both caches only after successful database update
+        cache.del("all_tasks");
+        cache.del(`task_${req.params.id}`);
+
         res.status(200).json(task);
 
     } catch (error) {
@@ -116,7 +145,7 @@ router.put("/:id", async (req, res) => {
 });
 
 
-// DELETE TASK
+// DELETE TASK (Invalidates "all_tasks" and "task_<id>")
 router.delete("/:id", async (req, res) => {
 
     try {
@@ -130,6 +159,10 @@ router.delete("/:id", async (req, res) => {
             });
 
         }
+
+        // Invalidate both caches only after successful database deletion
+        cache.del("all_tasks");
+        cache.del(`task_${req.params.id}`);
 
         res.status(200).json({
             message: "Task deleted successfully"
