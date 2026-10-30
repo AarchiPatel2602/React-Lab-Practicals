@@ -11,7 +11,8 @@ describe("Task Management API Test Suite", () => {
         it("should reject requests without authorization token with 401", async () => {
             const res = await request(app).get("/tasks");
 
-            assert.strictEqual(res.status, 401);
+            // Intentionally changed to 200 for remote CI failure demonstration
+            assert.strictEqual(res.status, 200);
             assert.strictEqual(res.body.message, "Authorization token is required");
         });
 
