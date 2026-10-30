@@ -5,6 +5,7 @@ import Loading from "../components/Loading";
 import ErrorMessage from "../components/ErrorMessage";
 
 const API_URL = "http://localhost:5000/tasks";
+const AI_API_URL = "http://localhost:5000/api/ai/generate-description";
 
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
@@ -19,6 +20,8 @@ function Projects() {
   const navigate = useNavigate();
 
   const [tasks, setTasks] = useState([]);
+  const [search, setSearch] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -28,6 +31,10 @@ function Projects() {
   const [actionLoading, setActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState("");
+
+  // Practical 13 AI State
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
 
   // HANDLE UNAUTHORIZED RESPONSE
   const handleUnauthorized = (response) => {
@@ -79,8 +86,55 @@ function Projects() {
       return;
     }
 
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        setCurrentUser(JSON.parse(userStr));
+      } catch (_) {}
+    }
+
     fetchTasks();
   }, []);
+
+  // LOGOUT
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    navigate("/login");
+  };
+
+  // GENERATE AI DESCRIPTION (Practical 13)
+  const generateAiDescription = async () => {
+    if (!title.trim()) {
+      setAiError("Please enter a Task Title first to generate an AI description.");
+      return;
+    }
+
+    try {
+      setAiLoading(true);
+      setAiError(null);
+
+      const response = await fetch(AI_API_URL, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ title: title.trim() }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to generate AI description");
+      }
+
+      if (data.description) {
+        setDescription(data.description);
+      }
+    } catch (err) {
+      setAiError(err.message || "Failed to contact AI service");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // CREATE TASK
   const createTask = async (e) => {
@@ -203,6 +257,14 @@ function Projects() {
     }
   };
 
+  const filteredTasks = tasks.filter((task) => {
+    const q = search.toLowerCase();
+    return (
+      task.title.toLowerCase().includes(q) ||
+      (task.description && task.description.toLowerCase().includes(q))
+    );
+  });
+
   if (loading) {
     return (
       <main className="page-shell">
@@ -225,9 +287,31 @@ function Projects() {
           </p>
         </div>
 
-        <div className="task-count">
-          <strong>{tasks.length}</strong>
-          <span>Total Tasks</span>
+        <div style={{ display: "flex", gap: "12px", alignItems: "center" }}>
+          {currentUser && (
+            <span style={{ fontSize: "14px", color: "#64748b" }}>
+              👤 {currentUser.name || currentUser.email}
+            </span>
+          )}
+          <button
+            onClick={handleLogout}
+            style={{
+              padding: "6px 14px",
+              background: "#ef4444",
+              color: "#fff",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
+              fontWeight: "600",
+              fontSize: "13px"
+            }}
+          >
+            Logout
+          </button>
+          <div className="task-count">
+            <strong>{tasks.length}</strong>
+            <span>Total Tasks</span>
+          </div>
         </div>
       </section>
 
@@ -268,14 +352,61 @@ function Projects() {
             />
           </div>
 
-          <div className="form-group">
-            <label>Description</label>
+          <div className="form-group full-width">
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+              <label style={{ margin: 0 }}>Description</label>
+              <button
+                type="button"
+                onClick={generateAiDescription}
+                disabled={aiLoading}
+                className="ai-generate-btn"
+                style={{
+                  background: aiLoading ? "#94a3b8" : "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                  color: "#ffffff",
+                  border: "none",
+                  borderRadius: "6px",
+                  padding: "5px 12px",
+                  fontSize: "12px",
+                  fontWeight: "600",
+                  cursor: aiLoading ? "not-allowed" : "pointer",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  boxShadow: "0 2px 4px rgba(79, 70, 229, 0.25)",
+                  transition: "all 0.2s ease"
+                }}
+              >
+                {aiLoading ? (
+                  <>
+                    <span style={{ display: "inline-block", width: "11px", height: "11px", border: "2px solid #ffffff", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                    Generating with AI...
+                  </>
+                ) : (
+                  <>✨ Generate Description</>
+                )}
+              </button>
+            </div>
 
             <textarea
               placeholder="Describe what needs to be completed..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              rows={3}
             />
+
+            {/* AI Error Notification */}
+            {aiError && (
+              <div style={{ marginTop: "6px", padding: "8px 12px", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "6px", color: "#dc2626", fontSize: "12px", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>⚠️</span>
+                <span>{aiError}</span>
+              </div>
+            )}
+
+            {/* AI Disclaimer */}
+            <div style={{ marginTop: "6px", fontSize: "11px", color: "#64748b", fontStyle: "italic", display: "flex", alignItems: "center", gap: "4px" }}>
+              <span>ℹ️</span>
+              <span><strong>AI Disclaimer:</strong> Descriptions generated by AI can be reviewed and edited freely before submitting the task.</span>
+            </div>
           </div>
 
           <div className="form-group">
@@ -310,23 +441,42 @@ function Projects() {
           </div>
 
           <span className="task-badge">
-            {tasks.length} {tasks.length === 1 ? "Task" : "Tasks"}
+            {filteredTasks.length} of {tasks.length} {tasks.length === 1 ? "Task" : "Tasks"}
           </span>
         </div>
 
-        {tasks.length === 0 ? (
+        <div style={{ margin: "16px 0" }}>
+          <input
+            type="text"
+            placeholder="🔍 Search tasks by title or description..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "10px 14px",
+              border: "1px solid #cbd5e1",
+              borderRadius: "8px",
+              fontSize: "14px",
+              boxSizing: "border-box"
+            }}
+          />
+        </div>
+
+        {filteredTasks.length === 0 ? (
           <div className="empty-state">
             <div className="empty-icon">✓</div>
 
-            <h3>No tasks yet</h3>
+            <h3>{tasks.length === 0 ? "No tasks yet" : `No tasks matching "${search}"`}</h3>
 
             <p>
-              Create your first task above and it will appear here.
+              {tasks.length === 0
+                ? "Create your first task above and it will appear here."
+                : "Try a different search keyword."}
             </p>
           </div>
         ) : (
           <div className="task-grid">
-            {tasks.map((task) => (
+            {filteredTasks.map((task) => (
               <article
                 className={`task-card ${
                   task.completed ? "completed-task" : ""

@@ -1,5 +1,7 @@
 # React + Vite Lab Practicals
 
+[![CI/CD Pipeline](https://github.com/AarchiPatel2602/React-Lab-Practicals/actions/workflows/ci.yml/badge.svg)](https://github.com/AarchiPatel2602/React-Lab-Practicals/actions/workflows/ci.yml)
+
 This repository contains the Full Stack Web Development Lab Practicals (React, Express, MongoDB, Node.js).
 
 ---
@@ -76,3 +78,45 @@ docker compose down -v
 2. **Backend API**: Send requests to `http://localhost:5000/tasks` or check backend health status.
 3. **MongoDB Connectivity**: Observe backend startup logs indicating `✅ MongoDB Connected` via service name `mongodb://mongodb:27017/taskdb`.
 4. **Data Persistence**: Add tasks through the UI or API, run `docker compose down`, restart with `docker compose up -d`, and verify that tasks remain intact.
+
+---
+
+## Practical 12: GitHub Actions CI/CD Pipeline
+
+### Overview
+Automated Continuous Integration and Continuous Deployment (CI/CD) workflow implemented using GitHub Actions (`.github/workflows/ci.yml`).
+
+### Workflow Features
+- **Triggers**: Automated pipeline triggered on pushes and pull requests targeting the `main` branch.
+- **Node.js Compatibility**: Sets up Node.js v20 LTS with npm caching for fast dependency resolution.
+- **Dependency Management**: Installs root/frontend and backend dependencies cleanly using `npm install`.
+- **Automated API Testing**: Runs backend endpoint test suite verifying authentication guards, task endpoints, cache statistics, and AI routes.
+- **Build Verification**: Verifies frontend production build compilation (`npm run build`).
+- **Status Badge**: Real-time workflow badge embedded in README showing pipeline pass/fail status.
+
+### Running Tests Locally
+```bash
+# Run tests from root
+npm test
+
+# Run tests directly in backend
+cd backend
+npm test
+```
+
+---
+
+## Practical 13: AI API Integration
+
+### Overview
+AI-powered task description generator integrated into the Task Management system.
+
+### Features
+- **Backend AI Route**: `POST /api/ai/generate-description` accepts `{ "title": "..." }` and generates professional descriptions using Google Gemini (`gemini-1.5-flash`) with fallback to OpenAI (`gpt-4o-mini`).
+- **Secure Key Management**: API credentials reside exclusively in `backend/.env` (git-ignored) with placeholders documented in `backend/.env.example`.
+- **Graceful Error Handling**: Handles missing API keys, invalid credentials, provider errors, and timeouts (10s abort controller) cleanly without interrupting existing task CRUD operations.
+- **Frontend Integration**:
+  - One-click **"✨ Generate Description"** button integrated into the task creation form.
+  - Interactive loading spinner during AI synthesis.
+  - Output populated into an editable textarea.
+  - Transparent AI-content disclaimer notifying users of generated content.

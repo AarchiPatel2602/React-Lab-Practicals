@@ -15,11 +15,17 @@ const errorHandler = require("./middleware/errorHandler");
 const taskRoutes = require("./routes/tasks");
 const authRoutes = require("./routes/auth");
 const cacheRoutes = require("./routes/cacheStats");
+const aiRoutes = require("./routes/ai");
+
+// Register Practical 10 Event Listeners
+require("./listeners");
 
 const app = express();
 
 // Connect MongoDB
-connectDB();
+if (process.env.NODE_ENV !== "test") {
+    connectDB();
+}
 
 // CORS
 app.use(
@@ -44,6 +50,7 @@ app.use(validateJson);
 app.use("/auth", authRoutes);
 app.use("/tasks", taskRoutes);
 app.use("/api/cache", cacheRoutes);
+app.use("/api/ai", aiRoutes);
 
 // 404 Handler
 app.use((req, res) => {
@@ -58,6 +65,10 @@ app.use(errorHandler);
 // Start Server
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+    });
+}
+
+module.exports = app;

@@ -4,6 +4,7 @@ const router = express.Router();
 
 const Task = require("../models/Task");
 const cache = require("../config/cache");
+const taskEvents = require("../events");
 
 const authMiddleware = require("../middleware/auth");
 
@@ -89,7 +90,16 @@ router.post("/", async (req, res) => {
         // Invalidate all_tasks cache only after successful database write
         cache.del("all_tasks");
 
+        const responseTime = new Date().toISOString();
+        console.log(`[API] Response sent at ${responseTime}`);
+
         res.status(201).json(task);
+
+        // Emit task-created after the response logic
+        taskEvents.emit("task-created", {
+            task,
+            user: req.user
+        });
 
     } catch (error) {
 
@@ -166,6 +176,13 @@ router.delete("/:id", async (req, res) => {
 
         res.status(200).json({
             message: "Task deleted successfully"
+        });
+
+        // Emit task-deleted after successful deletion
+        taskEvents.emit("task-deleted", {
+            id: req.params.id,
+            title: task.title,
+            user: req.user
         });
 
     } catch (error) {

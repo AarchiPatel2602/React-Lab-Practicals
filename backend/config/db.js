@@ -6,10 +6,14 @@ const connectDB = async () => {
 
         console.log("✅ MongoDB Connected");
     } catch (error) {
-        console.error("MongoDB Connection Failed");
-        console.error(error.message);
-
-        process.exit(1);
+        console.warn("Primary MongoDB Connection Failed:", error.message);
+        try {
+            console.log("Attempting fallback to local MongoDB (mongodb://127.0.0.1:27017/taskdb)...");
+            await mongoose.connect("mongodb://127.0.0.1:27017/taskdb");
+            console.log("✅ Fallback Local MongoDB Connected");
+        } catch (localErr) {
+            console.warn("MongoDB Connection Failed - server running without database connection:", localErr.message);
+        }
     }
 };
 

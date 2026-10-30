@@ -131,7 +131,8 @@ router.post("/login", async (req, res) => {
 // CURRENT USER
 router.get("/me", authMiddleware, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId).select("-password");
+    const userId = req.user._id || req.user.id || req.user.userId;
+    const user = await User.findById(userId).select("-password");
 
     if (!user) {
       return res.status(404).json({
@@ -147,6 +148,14 @@ router.get("/me", authMiddleware, async (req, res) => {
       message: error.message,
     });
   }
+});
+
+
+// LOGOUT
+router.post("/logout", authMiddleware, async (req, res) => {
+  res.status(200).json({
+    message: "Logout successful",
+  });
 });
 
 
